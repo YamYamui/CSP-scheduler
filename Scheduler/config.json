@@ -1,0 +1,25 @@
+{
+    "month": 8,
+    "pax": 6,
+    "favor_consecutive": 0,
+    "constraints": {
+        "M1": {
+            "cannot_work_on": [1]
+        },
+        "M2": {
+            "cannot_work_on": [1]
+        },
+        "M3": {
+            "cannot_work_on": [1]
+        },
+        "M4": {
+            "cannot_work_on": [1]
+        }
+    },
+    "insist": {
+
+    },
+    "covers": {
+        
+    }
+}
