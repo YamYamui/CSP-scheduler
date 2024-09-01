@@ -19,17 +19,18 @@ def main():
         sys.exit(f"Error: Failed to decode JSON from the file {config_file}.")
     
     # Get info from json file
+    year = config.get("year")
     month = config.get("month")
     pax = config.get("pax")
     favor_consecutive = config.get("favor_consecutive")
     constraints = config.get("constraints", {})
 
     # Essential info
-    if not all([month, pax]):
+    if not all([year, month, pax]):
         sys.exit("Error: Missing parameters in JSON file.")
 
     # Derived info
-    days = calendar.monthrange(2024, month)[1]
+    days = calendar.monthrange(year, month)[1]
     people = [f"M{i}" for i in range(1, pax + 1)]
 
     # Initialize CSP context
@@ -48,17 +49,18 @@ def main():
         duty_count = Counter()
         
         # Running backtracking with balancing to find a solution
-        assignment = solver.backtrack({}, duty_count, month)
+        assignment = solver.backtrack({}, duty_count, month, year)
 
     # Collating duty days for each individual
     if assignment:
         # duty_count = Counter(person for pair in assignment.values() for person in pair)
         # for day, pair in sorted(assignment.items()):
         #     print(f"Day {day}: {pair}")
+        print("Solution Found!")
         print("\nDuty Points:")
         for person, count in sorted(duty_count.items()):
             print(f"{person}: {count} Points")
-        solver.nice_print(assignment, people, month, days)
+        solver.nice_print(assignment, people, month, days, year)
     else:
         print("No solution found")
 

@@ -2,6 +2,8 @@ from itertools import combinations
 from collections import deque, Counter
 import calendar
 import datetime
+import csv
+
 
 class Variable:
     def __init__(self, name, domain):
@@ -30,7 +32,6 @@ class CSPContext:
                     for dates in constraints[personnel]["cannot_work_on"]:
                         self.variables[dates - 1].constraints.append(personnel)
 
-
 class CSPSolver:
     def __init__(self, csp_context):
         self.csp_context = csp_context
@@ -40,6 +41,8 @@ class CSPSolver:
         queue = deque([(i, j) for i in range(len(self.csp_context.variables)) for j in range(len(self.csp_context.variables)) if i != j])
         while queue:
             (i, j) = queue.popleft()
+            with open("logs.txt", "a") as f:
+                print(f"Processing arc ({i+1}, {j+1})", file = f)
             if self.revise(i, j):
                 if not self.csp_context.variables[i].domain:
                     return False
@@ -52,23 +55,41 @@ class CSPSolver:
     def revise(self, i, j):
         revised = False
         for x in self.csp_context.variables[i].domain[:]:
-            if not any(self.is_consistent({j: y}, i, x) for y in self.csp_context.variables[j].domain):
+            if not any(self.is_consistent({j: y}, i + 1, x) for y in self.csp_context.variables[j].domain):
                 self.csp_context.variables[i].domain.remove(x)
                 revised = True
         return revised
 
     # Checking for constraints
     def is_consistent(self, assignment, day, pair):
+        # Debugging
+        with open("logs.txt", "a") as f:
+            if day == 1:
+                print(f"Checking constraints for Day 1 and pair {pair}", file = f)
         # Check for consecutive duties
         for person in pair:
-            consecutive_count = 0
-            for d in range(day-1, day-3, -1):
-                if d in assignment and person in assignment[d]:
-                    consecutive_count += 1
-                else:
-                    break
-            if consecutive_count >= 2:
-                return False
+            if day - 1 in assignment and person in assignment[day - 1]:
+                if day - 2 in assignment and person in assignment[day - 2]:
+                    return False
+        
+            # Also check forward to see if this assignment would create a future problem
+            if day + 1 in assignment and person in assignment[day + 1]:
+                if day + 2 in assignment and person in assignment[day + 2]:
+                    return False
+                
+            # Also check forward to see if this assignment would create a future problem
+            if day + 1 in assignment and person in assignment[day + 1]:
+                if day - 1 in assignment and person in assignment[day - 1]:
+                    return False
+                
+            # consecutive_count = 0
+            # for d in range(day-1, day-3, -1):
+            #     if d in assignment and person in assignment[d]:
+            #         consecutive_count += 1
+            #     else:
+            #         break
+            # if consecutive_count >= 2:
+            #     return False
     
         # Check for block out dates
         for person in pair:
@@ -77,7 +98,7 @@ class CSPSolver:
         
         return True
 
-    def backtrack(self, assignment, duty_count, month):
+    def backtrack(self, assignment, duty_count, month, year):
         if len(assignment) == self.csp_context.days:
             return assignment
 
@@ -104,23 +125,31 @@ class CSPSolver:
         for pair in sorted_pairs:
             if self.is_consistent(assignment, day, pair):
                 assignment[day] = pair
-                if datetime.date(2024, month , day).weekday() >= 5:
+                if datetime.date(year, month , day).weekday() >= 5:
                     duty_count[pair[0]] += 2
                     duty_count[pair[1]] += 2
+
                 else:
                     duty_count[pair[0]] += 1
                     duty_count[pair[1]] += 1
-                result = self.backtrack(assignment, duty_count, month)
+
+                result = self.backtrack(assignment, duty_count, month, year)
+
+                # Assingments are filled, return to first function call
                 if result:
                     return result
+                
                 # Backtrack
                 assignment.pop(day)
-                if datetime.date(2022, month , day).weekday() >= 5:
+                if datetime.date(year, month , day).weekday() >= 5:
                     duty_count[pair[0]] -= 2
                     duty_count[pair[1]] -= 2
                 else:
                     duty_count[pair[0]] -= 1
                     duty_count[pair[1]] -= 1
+
+
+        # None of the pairs are consistent, return None to backtrack and try another pair in the previous assignment
         return None
 
     def lcv_heuristic(self, day, pair, duty_count):
@@ -152,49 +181,81 @@ class CSPSolver:
         consecutive_bonus = 0
         for i, person in enumerate(pair):
             if day > 1:
-                if day - 1 in assignment and person in assignment[day - 1]:
-                    consecutive_bonus += 1  # Favor continuing a sequence
+                if self.is_consistent(assignment, day, pair):
+                    if day - 1 in assignment and person in assignment[day - 1]:
+                        consecutive_bonus += 1  # Favor continuing a sequence
+                    elif day + 1 in assignment and person in assignment[day + 1]:
+                        consecutive_bonus += 1  # Favor continuing a sequence
 
         # Balance between consecutive duty preference and current duty load
         balance_factor = duty_count[pair[0]] + duty_count[pair[1]]
 
         # The lower the score, the better the pair fits the preference
-        return (2 - consecutive_bonus) * 1000 + balance_factor
+        return (2 - consecutive_bonus) + balance_factor
 
-    def nice_print(self, assignment, people, month, days): 
-        start_day = calendar.monthrange(2024, month)[0]
-
-        duty_roster = [["|  " for i in range(len(assignment))] for j in range(len(people))]
+    def nice_print(self, assignment, people, month, days, year): 
+        # Formating header rows
+        start_day = calendar.monthrange(year, month)[0]
+        days_of_week = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        day_row = [days_of_week[(start_day + i) % 7] for i in range(days)]
+        date_row = [(i + 1) for i in range(days)]
+        header_days = ["Days"] + day_row
+        header_dates = ["Dates"] + [f"{day:02d}." for day in date_row]
+    
+        # Duty Roster
+        duty_roster = [[None for i in range(len(assignment))] for j in range(len(people))]
         
         for j in range(len(assignment)):
             for i in range(len(people)):
                 if i == people.index(assignment[j + 1][0]):
-                    duty_roster[i][j] = "|P1"
+                    duty_roster[i][j] = "P1"
                 if i == people.index(assignment[j + 1][1]):
-                    duty_roster[i][j] = "|P2"
+                    duty_roster[i][j] = "P2"
+        
+        # Output to CSV file
+        with open('output.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
 
-        # Days of the week and dates
-        days_of_week = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        day_row = [days_of_week[(start_day + i) % 7] for i in range(days)]
-        date_row = [(i + 1) for i in range(days)]
+            writer.writerow(header_days)
+            writer.writerow(header_dates)
+            for i, row in enumerate(duty_roster):
+                row_str = [f"{people[i]} "] + [str(cell) if cell is not None else "  " for cell in row]
+                writer.writerow(row_str)
+
+        # start_day = calendar.monthrange(2024, month)[0]
+
+        # duty_roster = [["|  " for i in range(len(assignment))] for j in range(len(people))]
         
-        # Create the header with days and dates with dots
-        header_days = "  ".join(day_row)
-        header_dates = "  ".join(f"{day:02d}." for day in date_row)
+        # for j in range(len(assignment)):
+        #     for i in range(len(people)):
+        #         if i == people.index(assignment[j + 1][0]):
+        #             duty_roster[i][j] = "|P1"
+        #         if i == people.index(assignment[j + 1][1]):
+        #             duty_roster[i][j] = "|P2"
+
+        # # Days of the week and dates
+        # days_of_week = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        # day_row = [days_of_week[(start_day + i) % 7] for i in range(days)]
+        # date_row = [(i + 1) for i in range(days)]
         
-        # Define row and column separators
-        row_separator = "+" + "----+" * (days + 1)  # Extra column for baker names
-        header_separator = "+" + "----+" * (days + 1)  # Extra column for baker names
+        # # Create the header with days and dates with dots
+        # header_days = "  ".join(day_row)
+        # header_dates = "  ".join(f"{day:02d}." for day in date_row)
         
-        # Print header
-        print(row_separator)
-        print("| Bak" + "  " + header_days + "|")
-        print(header_separator)
-        print("|  " + "    " + header_dates + "|")
-        print(row_separator)
+        # # Define row and column separators
+        # row_separator = "+" + "----+" * (days + 1)  # Extra column for baker names
+        # header_separator = "+" + "----+" * (days + 1)  # Extra column for baker names
         
-        # Print duty roster
-        for i, row in enumerate(duty_roster):
-            row_str = f"{people[i]} " + "  ".join(str(cell) if cell is not None else "  " for cell in row)
-            print("| " + row_str + "  |")
-            print(row_separator)
+        # # Print header
+        # print(row_separator)
+        # print("| Bak" + "  " + header_days + "|")
+        # print(header_separator)
+        # print("|  " + "    " + header_dates + "|")
+        # print(row_separator)
+        
+        # # Print duty roster
+        # for i, row in enumerate(duty_roster):
+        #     row_str = f"{people[i]} " + "  ".join(str(cell) if cell is not None else "  " for cell in row)
+        #     print("| " + row_str + "  |")
+        #     print(row_separator)
+    
