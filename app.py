@@ -4,11 +4,11 @@ from flask_cors import CORS
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://fluffy-winner-j94rpp5xpqrhp94p-5173.app.github.dev", "methods": ["GET", "POST", "OPTIONS"]}}, supports_credentials=True
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}}, supports_credentials=True
 )
 
 # API endpoint to solve CSP
-@app.route('/api/solve', methods=['POST'])
+@app.route('/api/solve', methods=['POST', 'OPTIONS'])
 def solve():
     if request.method == 'OPTIONS':
         app.logger.info('OPTIONS request received')
