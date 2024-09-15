@@ -4,16 +4,19 @@ from flask_cors import CORS
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}}, supports_credentials=True
-)
 
-# API endpoint to solve CSP
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Set up CORS
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}}, supports_credentials=True)
+
 @app.route('/api/solve', methods=['POST', 'OPTIONS'])
 def solve():
     if request.method == 'OPTIONS':
         app.logger.info('OPTIONS request received')
+        # Respond to the OPTIONS request with necessary CORS headers
         return '', 200
-    return "CORS Test Passed!"
 
     # try:
     #     # Get the JSON input from the POST request
@@ -29,4 +32,4 @@ def solve():
     #     return jsonify({"error": str(e)}), 400
     
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True, host='0.0.0.0')
