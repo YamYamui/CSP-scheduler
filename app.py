@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify
 from generate import csp_solver 
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for now
 
 # API endpoint to solve CSP
 @app.route('/api/solve', methods=['POST'])
