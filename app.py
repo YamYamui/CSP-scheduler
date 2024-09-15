@@ -3,11 +3,13 @@ from generate import csp_solver
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://fluffy-winner-j94rpp5xpqrhp94p-5173.app.github.dev"}})
+CORS(app, resources={r"/*": {"origins": "https://fluffy-winner-j94rpp5xpqrhp94p-5173.app.github.dev"}}, supports_credentials=True)
 
 # API endpoint to solve CSP
 @app.route('/api/solve', methods=['POST'])
 def solve():
+    if request.method == 'OPTIONS':
+        return '', 200
     try:
         # Get the JSON input from the POST request
         json_data = request.get_json()
