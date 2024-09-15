@@ -15,7 +15,6 @@ CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS
 def solve():
     if request.method == 'OPTIONS':
         app.logger.info('OPTIONS request received')
-        # Respond to the OPTIONS request with necessary CORS headers
         return '', 200
 
     try:
