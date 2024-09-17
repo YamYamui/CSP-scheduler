@@ -62,4 +62,4 @@ def csp_solver(config):
         #     # print(f"{person}: {count} Points")
         #     solver.nice_print(assignment, people, month, days, year)
     else:
-        print("No solution found")
+        return None 
