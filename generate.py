@@ -7,7 +7,7 @@ def csp_solver(config):
     # if len(sys.argv) != 2:
     #     sys.exit("Usage: python generate.py config.json")
 
-    # # Load the JSON configuration file
+    # Load the JSON configuration file
     # config_file = sys.argv[1]
     # try:
     #     with open(config_file, 'r') as file:
@@ -23,6 +23,7 @@ def csp_solver(config):
     pax = config.get("pax")
     favor_consecutive = config.get("favor_consecutive")
     constraints = config.get("constraints", {})
+    covers = config.get("covers", {})
 
     # Essential info
     if not all([year, month, pax]):
@@ -33,7 +34,7 @@ def csp_solver(config):
     people = [f"M{i}" for i in range(1, pax + 1)]
 
     # Initialize CSP context
-    csp_context = CSPContext(people, days, favor_consecutive, constraints)
+    csp_context = CSPContext(people, days, favor_consecutive, constraints, covers)
 
     # Define and add constraints here if needed
 
@@ -53,13 +54,13 @@ def csp_solver(config):
     # Collating duty days for each individual
     if assignment:
         # duty_count = Counter(person for pair in assignment.values() for person in pair)
-        # for day, pair in sorted(assignment.items()):
-        #     print(f"Day {day}: {pair}")
+        for day, pair in sorted(assignment.items()):
+            print(f"Day {day}: {pair}")
         # print("Solution Found!")
         # print("\nDuty Points:")
+        for person, count in sorted(duty_count.items()):
+            print(f"{person}: {count} Points")
+            solver.nice_print(assignment, people, month, days, year)
         return assignment
-        # for person, count in sorted(duty_count.items()):
-        #     # print(f"{person}: {count} Points")
-        #     solver.nice_print(assignment, people, month, days, year)
     else:
         return None 
