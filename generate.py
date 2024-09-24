@@ -54,13 +54,15 @@ def csp_solver(config):
     # Collating duty days for each individual
     if assignment:
         # duty_count = Counter(person for pair in assignment.values() for person in pair)
+
         for day, pair in sorted(assignment.items()):
             print(f"Day {day}: {pair}")
-        # print("Solution Found!")
-        # print("\nDuty Points:")
+            print("Solution Found!")
+            print("\nDuty Points:")
         for person, count in sorted(duty_count.items()):
             print(f"{person}: {count} Points")
             solver.nice_print(assignment, people, month, days, year)
+
         return assignment
     else:
         return None 

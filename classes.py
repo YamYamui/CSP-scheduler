@@ -91,12 +91,6 @@ class CSPSolver:
     
     # Checking for constraints
     def is_consistent(self, assignment, variable, value):
-        # # Debugging
-        # with open("logs.txt", "a") as f:
-        #     if day == 1:
-        #         print(f"Checking constraints for Day 1 and pair {pair}", file = f)
-        
-        # print(f"running consistent check for {variable.name} and {value}")
         if variable.duty_type == "normal":
             day = variable.duration[0]
 
@@ -120,7 +114,13 @@ class CSPSolver:
                 if (str(day - 1) in assignment and person in assignment[str(day - 1)] and
                     str(day + 1) in assignment and person in assignment[str(day + 1)]):
                     return False
-                    
+            
+            # Check for covers the next day
+            for cover_variable_name, cover_person in assignment.items():
+                cover_variable = self.get_variable(cover_variable_name)
+                if cover_variable.duty_type == "cover":
+                    if cover_variable.duration[0] == day + 1  and cover_person in value:
+                        return False   
             # Check block out dates
             if any(person in variable.constraints for person in value):
                 return False
@@ -277,7 +277,7 @@ class CSPSolver:
 
         
         # Output to CSV file
-        with open('output1.csv', 'w', newline='') as file:
+        with open('output.csv', 'w', newline='') as file:
             writer = csv.writer(file)
 
             writer.writerow(header_days)
